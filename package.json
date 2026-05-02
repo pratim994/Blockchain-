@@ -1,0 +1,53 @@
+{
+  "name": "blockchain-simulator",
+  "version": "1.0.0",
+  "description": "Production-grade distributed blockchain simulator",
+  "private": true,
+  "workspaces": [
+    "shared",
+    "core",
+    "server",
+    "client"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces --if-present",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "lint": "eslint '**/*.{ts,tsx}' --ignore-path .gitignore",
+    "test": "jest --passWithNoTests",
+    "test:unit": "jest --testPathPattern='core/src/__tests__'",
+    "test:integration": "jest --testPathPattern='server/src/__tests__'",
+    "dev:server": "npm run dev --workspace=server",
+    "dev:client": "npm run dev --workspace=client",
+    "docker:up": "docker compose up --build",
+    "docker:down": "docker compose down -v"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.14",
+    "@types/node": "^20.19.39",
+    "@types/ws": "^8.5.10",
+    "@typescript-eslint/eslint-plugin": "^7.0.0",
+    "@typescript-eslint/parser": "^7.0.0",
+    "eslint": "^8.57.0",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.1.4",
+    "typescript": "^5.4.5"
+  },
+  "jest": {
+    "preset": "ts-jest",
+    "testEnvironment": "node",
+    "moduleNameMapper": {},
+    "coverageThreshold": {
+      "global": {
+        "branches": 70,
+        "functions": 80,
+        "lines": 80,
+        "statements": 80
+      }
+    }
+  },
+  "dependencies": {
+    "axios": "^1.15.2",
+    "crypto": "^1.0.1",
+    "zustand": "^5.0.12"
+  }
+}

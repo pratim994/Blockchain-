@@ -1,0 +1,121 @@
+# ============================================================
+# docker-compose.yml
+#
+# Simulates a 3-node blockchain network:
+#   - node1, node2, node3  (blockchain servers)
+#   - client               (React frontend, proxied by nginx)
+#
+# Usage:
+#   docker compose up --build
+#   docker compose up --scale node=5  (add more nodes)
+# ============================================================
+
+version: "3.9"
+
+x-node-defaults: &node-defaults
+  build:
+    context: .
+    dockerfile: server/Dockerfile
+  restart: unless-stopped
+  networks:
+    - blockchain-net
+  healthcheck:
+    test:  ["CMD", "wget", "-qO-", "http://localhost:3000/healthz"]
+    interval: 15s
+    timeout:  5s
+    retries:  3
+
+services:
+  # ── Blockchain nodes ─────────────────────────────────────
+
+  node1:
+    <<: *node-defaults
+    container_name: blockchain-node1
+    environment:
+      PORT:        "3000"
+      NODE_ID:     "node-1"
+      NODE_ENV:    "production"
+      DIFFICULTY:  "3"
+      BLOCK_REWARD: "50"
+      TARGET_BLOCK_TIME_MS: "5000"
+    ports:
+      - "3001:3000"   # expose for direct debugging
+
+  node2:
+    <<: *node-defaults
+    container_name: blockchain-node2
+    environment:
+      PORT:        "3000"
+      NODE_ID:     "node-2"
+      NODE_ENV:    "production"
+      DIFFICULTY:  "3"
+      BLOCK_REWARD: "50"
+      TARGET_BLOCK_TIME_MS: "5000"
+    ports:
+      - "3002:3000"
+
+  node3:
+    <<: *node-defaults
+    container_name: blockchain-node3
+    environment:
+      PORT:        "3000"
+      NODE_ID:     "node-3"
+      NODE_ENV:    "production"
+      DIFFICULTY:  "3"
+      BLOCK_REWARD: "50"
+      TARGET_BLOCK_TIME_MS: "5000"
+    ports:
+      - "3003:3000"
+
+  # ── Load balancer / entry point ──────────────────────────
+
+  nginx-lb:
+    image: nginx:1.25-alpine
+    container_name: blockchain-lb
+    volumes:
+      - ./infra/nginx-lb.conf:/etc/nginx/nginx.conf:ro
+    ports:
+      - "3000:80"
+    depends_on:
+      node1:
+        condition: service_healthy
+      node2:
+        condition: service_healthy
+      node3:
+        condition: service_healthy
+    networks:
+      - blockchain-net
+    restart: unless-stopped
+
+  # ── React frontend ───────────────────────────────────────
+
+  client:
+    build:
+      context: .
+      dockerfile: client/Dockerfile
+    container_name: blockchain-client
+    environment:
+      REACT_APP_WS_URL: "ws://localhost:3000"
+    ports:
+      - "8080:80"
+    depends_on:
+      - nginx-lb
+    networks:
+      - blockchain-net
+    restart: unless-stopped
+
+  # ── Observability (optional) ─────────────────────────────
+  # Uncomment to add Prometheus + Grafana for metrics
+
+  # prometheus:
+  #   image: prom/prometheus:v2.47.0
+  #   volumes:
+  #     - ./infra/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+  #   ports:
+  #     - "9090:9090"
+  #   networks:
+  #     - blockchain-net
+
+networks:
+  blockchain-net:
+    driver: bridge
